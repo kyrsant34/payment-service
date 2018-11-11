@@ -1,0 +1,71 @@
+version: '3.4'
+
+
+x-global-environment: &global-environment
+  C_PROJECT_VERSION: __PROJECT_VERSION__
+  PROJECT_STACK: __PROJECT_STACK__
+  MYSQL_HOST: ${MYSQL_HOST}
+  MYSQL_USER: ${MYSQL_USER}
+  MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+  MYSQL_DATABASE: ${MYSQL_DATABASE}
+
+
+services:
+    db:
+     image: mysql:5.7.24
+     container_name: __PROJECT_NAME__-db
+     environment:
+       - MYSQL_ROOT_PASSWORD=${MYSQL_PASSWORD}
+       - MYSQL_DATABASE=${MYSQL_DATABASE}
+     volumes:
+         - ./.docker/mysql/data:/var/lib/mysql
+         - ./share/sql:/docker-entrypoint-initdb.d
+     restart: always
+     command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --default-password-lifetime=0 --performance-schema=0
+
+    backend:
+        image: __PROJECT_NAME__-virtualenv:latest
+        container_name: __PROJECT_NAME__-backend
+        environment:
+          <<: *global-environment
+          FLASK_APP: payment_service.wsgi:wsgi_app
+        volumes:
+            - .:/code
+        depends_on:
+            - db
+        restart: always
+        ports:
+          - "8000:8000"
+        command: gunicorn payment_service.wsgi:app -b 0.0.0.0:8000 --reload --log-level info
+
+    test:
+      image: __PROJECT_NAME__-virtualenv-test:latest
+      container_name: __PROJECT_NAME__-test
+      environment:
+        <<: *global-environment
+        COVERAGE_PROCESS_START: "/code/share/coverage/.coveragerc"
+      volumes:
+      - .:/code
+      command: ["echo", "'test'"]
+
+    selenium-hub:
+      image: selenium/hub
+      container_name: __PROJECT_NAME__-selenium-hub
+      ports:
+        - "4444:4444"
+
+    selenium-node-chrome:
+      image: selenium/node-chrome
+      environment:
+        - HUB_HOST=selenium-hub
+        - HUB_PORT=4444
+      depends_on:
+        - selenium-hub
+
+    selenium-node-firefox:
+      image: selenium/node-firefox
+      environment:
+        - HUB_HOST=selenium-hub
+        - HUB_PORT=4444
+      depends_on:
+        - selenium-hub

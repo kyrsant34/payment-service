@@ -1,0 +1,32 @@
+image:
+  name: docker/compose:1.22.0
+  entrypoint: ["/bin/sh", "-c"]
+
+services:
+  - docker:dind
+
+variables:
+  DOCKER_DRIVER: overlay2 #improve performance for dind
+  DOCKER_HOST: "tcp://docker:2375" # enables docker-base-extended image to communicate with dind container
+
+before_script:
+  - apk add --update bash git
+  - cp env.orig .env
+
+stages:
+  - test
+
+test:
+  stage: test
+  script:
+    - ./run.sh stack
+    - ./run.sh test ci
+  coverage: '/TOTAL\s+\d+\s+\d+\s+(\d+)%$/'
+  artifacts:
+    reports:
+      junit:
+        - ./tmp/test/unit/report.xml
+        - ./tmp/test/functional/report.xml
+    paths:
+      - ./tmp
+    expire_in: 1 week

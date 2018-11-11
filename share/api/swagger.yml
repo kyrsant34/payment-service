@@ -1,0 +1,345 @@
+swagger: "2.0"
+
+info:
+  version: "1.0.0"
+  title: "{{title}}"
+
+basePath: "/api/v1.0"
+
+schemes:
+ - http
+
+consumes:
+- "application/json"
+produces:
+- "application/json"
+
+definitions:
+  Transaction_creation:
+    type: object
+    required:
+      - service_id
+      - account_id
+      - type
+      - amount
+      - currency
+      - country
+    properties:
+      service_id:
+        type: string
+        description: A service identifier
+        example: "stat-service"
+      account_id:
+        type: integer
+        description: A user account identifier
+        example: 1
+      type:
+        type: string
+        example: DEPOSIT
+        enum: [DEPOSIT, WITHDRAWAL]
+        description: A transaction type
+      amount:
+        type: string
+        example: "1.00"
+        description: A transaction amount
+      currency:
+        type: string
+        example: USD
+        enum: [USD, CNY, JPY]
+        description: A currency code according to ISO-4217
+      country:
+        type: string
+        example: CHN
+        enum: [CHN, JPN]
+        description: A user's country to the transaction
+      backend:
+        type: string
+        description: A payment system's code to the transaction
+        example: VISA
+        readOnly: true
+      callback:
+        type: string
+        description: A callback code when the transaction is confirmed by the payment system
+        example: "http://localhost/callbacks/deposit/"
+      extra:
+        type: object
+        description: A extra parameters to the transaction
+        properties:
+          bank_code:
+            type: string
+            description: A bank code to the transaction
+            example: ABC
+          client_id:
+            type: string
+            description: A client id
+            example: "31312"
+          client_ip:
+            type: string
+            description: A client ip
+            example: 213.165.1.20
+          client_email:
+            type: string
+            description: A client email
+            example: lala@gmai.com
+          locale:
+            type: string
+            description: A client locale
+            example: en
+
+  Transaction:
+    type: object
+    required:
+      - service_id
+      - account_id
+      - type
+      - amount
+      - currency
+      - country
+    properties:
+      id:
+        type: integer
+        description: A transaction identifier
+        example: 1
+        readOnly: true
+      service_id:
+        type: string
+        description: A service identifier
+        example: "stat-service"
+      account_id:
+        type: integer
+        description: A user account identifier
+        example: 1
+      type:
+        type: string
+        example: DEPOSIT
+        enum: [DEPOSIT, WITHDRAWAL]
+        description: A transaction type
+      amount:
+        type: string
+        example: "1.00"
+        description: A transaction amount
+      currency:
+        type: string
+        example: USD
+        enum: [USD, CNY, JPY]
+        description: A currency code according to ISO-4217
+      country:
+        type: string
+        example: CHN
+        enum: [CHN, JPN]
+        description: A user's country to the transaction
+      backend:
+        type: string
+        description: A payment system's code to the transaction
+        example: VISA
+        readOnly: true
+      callback:
+        type: string
+        description: A callback code when the transaction is confirmed by the payment system
+        example: "http://localhost/callbacks/deposit/"
+      extra:
+        type: object
+        description: A extra parameters to the transaction
+        properties:
+          bank_code:
+            type: string
+            description: A bank code to the transaction
+            example: ABC
+      status:
+        type: string
+        readOnly: true
+        example: NEW
+        enum: [NEW, PENDING, FAILED, SUCCEDED]
+      updated_at:
+        type: string
+        format: date-time
+        description: A date the transaction was updated
+        readOnly: true
+        example: "2018-07-07 12:13:14"
+      created_at:
+        type: string
+        format: date-time
+        description: A date the transaction was created
+        readOnly: true
+        example: "2018-07-07 12:13:14"
+
+  Visa_withdrawal_notification:
+    type: object
+    required:
+      - order_id
+      - ftp_response[code]
+      - auth_signature
+    properties:
+      status:
+        type: string
+        description: A withdrawal transaction status in payment system
+        example: "success"
+      order_id:
+        type: string
+        description: A withdrawal transaction id in our system
+        example: "233"
+      ftp_response[message]:
+        type: string
+        description: A withdrawal transaction code
+        example: "transaction successful"
+      ftp_response[code]:
+        type: string
+        example: "1"
+        description: A withdrawal transaction code
+      auth_signature:
+        type: string
+        example: "42rf22342f2ty2g2g"
+        description: A transaction crypto signature
+
+  Visa_deposit_notification:
+    type: object
+    required:
+      - order_id
+      - ftp_response[code]
+      - auth_signature
+    properties:
+      trans_id:
+        type: string
+        example: "312"
+      status:
+        type: string
+        description: A deposit transaction status in payment system
+        example: "success"
+      order_id:
+        type: string
+        description: A deposit transaction id in our system
+        example: "233"
+      ftp_response[message]:
+        type: string
+        description: A deposit transaction code
+        example: "transaction successful"
+      ftp_response[code]:
+        type: string
+        example: "1"
+        description: A deposit transaction code
+      auth_signature:
+        type: string
+        example: "42rf22342f2ty2g2g"
+        description: A deposit crypto signature
+
+
+  MasterCard_deposit_notification:
+    type: object
+    required:
+      - orderXML
+      - sha512
+    properties:
+      orderXML:
+        type: string
+        example: '''<order number="12"
+                 status="SUCCESS"
+                 currency="CNY"
+                 amount="120.12"'''
+        description: Base-64 encoded XML Request
+      sha512:
+        type: string
+        example: "42rf22342f2ty2g2g"
+        description: A deposit crypto signature
+
+
+paths:
+  /transaction:
+    post:
+      operationId: payment_service.app.views.transaction.create
+      summary: "Create a transaction"
+      consumes:
+      - application/json
+      parameters:
+      - in: body
+        name: transaction_data
+        description: The transaction to create.
+        required: true
+        schema:
+          $ref: "#/definitions/Transaction_creation"
+
+      responses:
+        201:
+          description: Successfully created transaction.
+          schema:
+            $ref: "#/definitions/Transaction"
+    get:
+      operationId: payment_service.app.views.transaction.list
+      summary: "Get transaction list."
+      responses:
+        200:
+          description: Gets transaction list
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/Transaction"
+
+
+  /transaction/{transaction_id}:
+    get:
+      operationId: payment_service.app.views.transaction.get_by_id
+      summary: "Gets a transaction by ID."
+      parameters:
+      - in: path
+        name: transaction_id
+        type: integer
+        required: true
+        description: Numeric ID of the transaction to get.
+      responses:
+        200:
+          description: Gets transaction by id
+          schema:
+            $ref: "#/definitions/Transaction"
+
+  /callbacks/visa/withdrawal:
+    post:
+      operationId: payment_service.app.views.callbacks.visa.withdrawal_notification
+      summary: "Withdrawal transaction callback from visa"
+      consumes:
+      - application/json
+      parameters:
+      - in: body
+        name: request_data
+        description: The withdrawal notification parameters.
+        required: true
+        schema:
+          $ref: "#/definitions/Visa_withdrawal_notification"
+
+      responses:
+        200:
+          description: Successfully withdrawal notification response.
+
+  /callbacks/visa/deposit:
+    post:
+      operationId: payment_service.app.views.callbacks.visa.deposit_notification
+      summary: "deposit transaction callback from visa"
+      consumes:
+        - application/json
+      parameters:
+        - in: body
+          name: request_data
+          description: The deposit notification parameters.
+          required: true
+          schema:
+            $ref: "#/definitions/Visa_deposit_notification"
+
+      responses:
+        200:
+          description: Successfully deposit notification response.
+
+  /callbacks/mastercard/deposit:
+    post:
+      operationId: payment_service.app.views.callbacks.mastercard.deposit_notification
+      summary: "deposit transaction callback from mastercard"
+      consumes:
+        - application/json
+      parameters:
+        - in: body
+          name: request_data
+          description: The deposit notification parameters.
+          required: true
+          schema:
+            $ref: "#/definitions/MasterCard_deposit_notification"
+
+      responses:
+        200:
+          description: Successfully deposit notification response.
